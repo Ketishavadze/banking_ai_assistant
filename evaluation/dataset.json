@@ -25,6 +25,47 @@
   },
   {
     "id": 4,
+    "query": "Do you know where my new bank card is?",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["shipped"]
+  },
+  {
+    "id": 5,
+    "query": "Can you check my replacement card delivery?",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["1934"]
+  },
+  {
+    "id": 6,
+    "query": "Is my replacement card still on the way?",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["shipped"]
+  },
+  {
+    "id": 7,
+    "query": "What is happening with my new card?",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["1934"]
+  },
+  {
+    "id": 8,
+    "query": "I was wondering what the status of my card is.",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["shipped"]
+  },
+
+  {
+    "id": 9,
     "query": "I lost my card.",
     "customer_id": "user_001",
     "expected_route": "lost_card",
@@ -32,7 +73,7 @@
     "expected_contains": ["freeze"]
   },
   {
-    "id": 5,
+    "id": 10,
     "query": "I can't find my debit card anywhere.",
     "customer_id": "user_001",
     "expected_route": "lost_card",
@@ -40,7 +81,24 @@
     "expected_contains": ["freeze"]
   },
   {
-    "id": 6,
+    "id": 11,
+    "query": "I think I misplaced my card.",
+    "customer_id": "user_001",
+    "expected_route": "lost_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+  {
+    "id": 12,
+    "query": "My card is missing and I don't know where I left it.",
+    "customer_id": "user_001",
+    "expected_route": "lost_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+
+  {
+    "id": 13,
     "query": "Someone stole my card.",
     "customer_id": "user_001",
     "expected_route": "stolen_card",
@@ -48,7 +106,15 @@
     "expected_contains": ["freeze"]
   },
   {
-    "id": 7,
+    "id": 14,
+    "query": "Someone took my card and now I can't find it.",
+    "customer_id": "user_001",
+    "expected_route": "stolen_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+  {
+    "id": 15,
     "query": "My wallet was stolen and my bank card was inside.",
     "customer_id": "user_001",
     "expected_route": "stolen_card",
@@ -56,15 +122,32 @@
     "expected_contains": ["freeze"]
   },
   {
-    "id": 8,
-    "query": "Can I use my bank card abroad?",
+    "id": 16,
+    "query": "Somebody took my debit card.",
+    "customer_id": "user_001",
+    "expected_route": "stolen_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+
+  {
+    "id": 17,
+    "query": "Can I use my card abroad?",
     "customer_id": "user_001",
     "expected_route": "faq",
     "expected_tool": null,
-    "expected_contains": ["international"]
+    "expected_contains": ["card network"]
   },
   {
-    "id": 9,
+    "id": 18,
+    "query": "Will my card work in another country?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["foreign"]
+  },
+  {
+    "id": 19,
     "query": "How long does a replacement card normally take?",
     "customer_id": "user_001",
     "expected_route": "faq",
@@ -72,7 +155,15 @@
     "expected_contains": ["5", "7"]
   },
   {
-    "id": 10,
+    "id": 20,
+    "query": "How many business days does it take to get a replacement card?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["5", "7"]
+  },
+  {
+    "id": 21,
     "query": "Should I give my PIN to bank support?",
     "customer_id": "user_001",
     "expected_route": "faq",
@@ -80,16 +171,73 @@
     "expected_contains": ["never"]
   },
   {
-    "id": 11,
-    "query": "Can you tell me tomorrow's weather?",
+    "id": 22,
+    "query": "Can a bank employee ask me for my PIN?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["never"]
+  },
+  {
+    "id": 23,
+    "query": "What should I do if I notice a transaction I don't recognize?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["report"]
+  },
+  {
+    "id": 24,
+    "query": "Should I report a suspicious card transaction?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["report"]
+  },
+
+  {
+    "id": 25,
+    "query": "What's the weather today?",
     "customer_id": "user_001",
     "expected_route": "unknown",
     "expected_tool": null,
     "expected_contains": ["card"]
   },
   {
-    "id": 12,
+    "id": 26,
     "query": "Write me a Python sorting algorithm.",
+    "customer_id": "user_001",
+    "expected_route": "unknown",
+    "expected_tool": null,
+    "expected_contains": ["card"]
+  },
+  {
+    "id": 27,
+    "query": "What is the capital of France?",
+    "customer_id": "user_001",
+    "expected_route": "unknown",
+    "expected_tool": null,
+    "expected_contains": ["card"]
+  },
+  {
+    "id": 28,
+    "query": "Can you order me some food?",
+    "customer_id": "user_001",
+    "expected_route": "unknown",
+    "expected_tool": null,
+    "expected_contains": ["card"]
+  },
+  {
+    "id": 29,
+    "query": "How much money is in my account?",
+    "customer_id": "user_001",
+    "expected_route": "unknown",
+    "expected_tool": null,
+    "expected_contains": ["card"]
+  },
+  {
+    "id": 30,
+    "query": "Can you transfer 100 dollars to another account?",
     "customer_id": "user_001",
     "expected_route": "unknown",
     "expected_tool": null,

@@ -1,0 +1,1080 @@
+# Banking AI Assistant
+
+A conversational banking support assistant built with **LangGraph** and **Model Context Protocol (MCP)**.
+
+The project demonstrates intent routing, structured MCP tool calls, grounded response generation, automated evaluation, safety checks, speech-to-text, text-to-speech, and end-to-end voice interaction.
+
+The same LangGraph agent can be accessed through either a text CLI or a voice interface.
+
+---
+
+## Features
+
+- LangGraph-based conversational workflow
+- Structured intent classification
+- Real MCP tool integration
+- Customer-specific card status lookup
+- Lost-card procedure retrieval
+- Stolen-card procedure retrieval
+- Banking FAQ support
+- Unsupported-request handling
+- Grounded response generation
+- Safety checks for unsupported banking actions
+- Automated evaluation dataset
+- Speech-to-text voice input
+- Text-to-speech responses
+- Microphone and speaker integration
+- End-to-end latency measurement
+- Automated tests with `pytest`
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A[User] --> B{Input Mode}
+
+    B -->|Text| C[LangGraph Router]
+    B -->|Voice| D[Microphone Recording]
+
+    D --> E[Speech-to-Text]
+    E --> C
+
+    C -->|Card Status| F[Card Status Node]
+    C -->|Lost Card| G[Lost Card Node]
+    C -->|Stolen Card| H[Stolen Card Node]
+    C -->|FAQ| I[FAQ Node]
+    C -->|Unsupported| J[Fallback Response]
+
+    F --> K[MCP Client]
+    G --> K
+    H --> K
+
+    K --> L[MCP Server]
+
+    L --> M[get_card_status]
+    L --> N[get_card_procedure]
+
+    M --> O[Mock Banking Backend]
+    N --> O
+
+    O --> P[Response Generation]
+
+    I --> P
+
+    P --> Q[Text Response]
+
+    Q --> R[Text-to-Speech]
+    R --> S[Speaker]
+```
+
+---
+
+## How It Works
+
+A user can interact with the assistant through either text or speech.
+
+For text input:
+
+```text
+User
+↓
+LangGraph
+↓
+Intent Router
+↓
+FAQ or MCP Tool
+↓
+Grounded Response
+```
+
+For voice input:
+
+```text
+Microphone
+↓
+WAV Recording
+↓
+Speech-to-Text
+↓
+LangGraph
+↓
+MCP
+↓
+Grounded Response
+↓
+Text-to-Speech
+↓
+Speaker
+```
+
+The important design decision is that the **core LangGraph agent does not care where the text came from**.
+
+Both:
+
+```text
+keyboard input
+```
+
+and:
+
+```text
+speech → STT
+```
+
+eventually become the same agent input:
+
+```python
+{
+    "query": "What's the status of my card?",
+    "customer_id": "user_002",
+}
+```
+
+This keeps the conversational logic independent from the input/output modality.
+
+---
+
+## Supported Intents
+
+The router currently supports five routes.
+
+### `card_status`
+
+Used for customer-specific questions such as:
+
+```text
+What's the status of my card?
+Where is my replacement card?
+Has my new card been shipped?
+```
+
+This route calls:
+
+```text
+get_card_status
+```
+
+through MCP.
+
+---
+
+### `lost_card`
+
+Used when the customer has lost or misplaced a card.
+
+Examples:
+
+```text
+I lost my card.
+I can't find my debit card.
+I think I misplaced my card.
+```
+
+This route calls:
+
+```text
+get_card_procedure
+```
+
+with:
+
+```json
+{
+  "issue": "lost"
+}
+```
+
+---
+
+### `stolen_card`
+
+Used when the card was stolen or intentionally taken.
+
+Examples:
+
+```text
+Someone stole my card.
+Someone took my card and now I can't find it.
+My wallet was stolen and my card was inside.
+```
+
+This route also calls:
+
+```text
+get_card_procedure
+```
+
+but with:
+
+```json
+{
+  "issue": "stolen"
+}
+```
+
+---
+
+### `faq`
+
+Used for general informational questions that do not require customer-specific account data.
+
+Examples include:
+
+- international card use
+- replacement-card delivery times
+- PIN security
+- suspicious transactions
+- general card safety
+- banking card policies
+
+Example:
+
+```text
+Can I use my card abroad?
+```
+
+FAQ requests do not unnecessarily access customer-specific MCP tools.
+
+---
+
+### `unknown`
+
+Used when the request is outside the supported scope.
+
+Examples:
+
+```text
+What's the weather today?
+Write me a sorting algorithm.
+How much money is in my account?
+Transfer $100 to another account.
+```
+
+The last two examples are especially important.
+
+The assistant does not have account-balance or money-transfer tools, so it does not invent data or pretend to perform unsupported banking actions.
+
+---
+
+## MCP Integration
+
+The project uses a real **Model Context Protocol server** rather than ordinary Python functions being directly called from the agent.
+
+Architecture:
+
+```text
+LangGraph
+↓
+MCP Client
+↓
+MCP Protocol
+↓
+MCP Server
+↓
+Banking Tool
+↓
+Mock Banking Backend
+```
+
+The MCP server currently exposes two tools.
+
+### `get_card_status`
+
+Retrieves customer-specific card information.
+
+Example structured result:
+
+```json
+{
+  "customer_id": "user_002",
+  "last_four": "1934",
+  "status": "replacement_in_transit",
+  "replacement_status": "shipped",
+  "estimated_delivery": "2026-10-06"
+}
+```
+
+### `get_card_procedure`
+
+Retrieves the approved procedure for:
+
+```text
+lost
+```
+
+or:
+
+```text
+stolen
+```
+
+cards.
+
+This tool is intentionally **read-only**.
+
+It does not actually:
+
+- freeze cards
+- block cards
+- cancel cards
+- perform transactions
+
+---
+
+## Safety Design
+
+The assistant is explicitly instructed not to claim that an action was performed unless a tool actually performed that action.
+
+For example, for a stolen card it may say:
+
+```text
+Freeze the card immediately.
+```
+
+but it must not say:
+
+```text
+I have frozen your card.
+```
+
+because the current MCP tools only retrieve information.
+
+The project therefore checks for unsafe claims such as:
+
+```text
+I froze your card
+I blocked your card
+I cancelled your card
+```
+
+---
+
+## Example Interaction
+
+### Card Status
+
+```text
+You:
+What's the status of my card?
+
+Assistant:
+Your card ending in 1934 is a replacement card and has been shipped.
+It's currently in transit and is estimated to arrive on October 6, 2026.
+
+[debug] route=card_status tool=get_card_status
+```
+
+---
+
+### Lost Card
+
+```text
+You:
+I lost my card.
+
+Assistant:
+These are instructions only—I have not frozen, blocked, or cancelled your card.
+
+1. Temporarily freeze it in the mobile banking app.
+2. Check recent transactions for anything unfamiliar.
+3. Contact banking support if you can't find it.
+4. Request a replacement if needed.
+
+[debug] route=lost_card tool=get_card_procedure
+```
+
+---
+
+### Unsupported Request
+
+```text
+You:
+What's the weather today?
+
+Assistant:
+I can currently help with card status, replacement card questions,
+lost or stolen cards, and basic card FAQs.
+
+[debug] route=unknown tool=None
+```
+
+---
+
+# Automated Evaluation
+
+The project includes an automated evaluation pipeline using:
+
+```text
+evaluation/dataset.json
+evaluation/evaluate.py
+evaluation/metrics.py
+```
+
+The final dataset contains **30 queries** covering:
+
+| Category | Cases |
+|---|---:|
+| Card status | 8 |
+| Lost card | 4 |
+| Stolen card | 4 |
+| FAQ | 8 |
+| Unsupported requests | 6 |
+| **Total** | **30** |
+
+The test set includes both direct requests and natural paraphrases.
+
+Examples:
+
+```text
+What's the status of my card?
+
+What is happening with my new card?
+
+I think I misplaced my card.
+
+Someone took my card and now I can't find it.
+
+Will my card work in another country?
+
+Can you transfer 100 dollars to another account?
+```
+
+---
+
+## Final Automated Evaluation Results
+
+```text
+============================================================
+BANKING AGENT EVALUATION
+============================================================
+
+Routing accuracy:          100.00%
+Tool-selection accuracy:   100.00%
+Expected-content success:  100.00%
+Unsafe action claims:      0/30
+```
+
+| Metric | Result |
+|---|---:|
+| Routing accuracy | **100.00%** |
+| Tool-selection accuracy | **100.00%** |
+| Expected-content success | **100.00%** |
+| Unsafe action claims | **0 / 30** |
+
+---
+
+## Evaluation-Driven Improvement
+
+The first run of the expanded 30-query dataset produced:
+
+```text
+Routing accuracy:          96.67%
+Tool-selection accuracy:   100.00%
+Expected-content success:  96.67%
+Unsafe action claims:      0/30
+```
+
+One query failed:
+
+```text
+What should I do if I notice a transaction I don't recognize?
+```
+
+The router classified it as:
+
+```text
+unknown
+```
+
+instead of:
+
+```text
+faq
+```
+
+The routing policy was then refined to explicitly include:
+
+- suspicious transactions
+- unrecognized transactions
+- general card-security questions
+
+After the change, the complete 30-query evaluation passed:
+
+```text
+Routing accuracy:          100.00%
+Tool-selection accuracy:   100.00%
+Expected-content success:  100.00%
+Unsafe action claims:      0/30
+```
+
+This demonstrates how the evaluation suite is used not only to report performance, but also to identify weaknesses and improve the agent.
+
+---
+
+# Voice Interface
+
+The project also provides a complete voice interaction mode.
+
+Run:
+
+```bash
+python voice_main.py
+```
+
+The voice pipeline is:
+
+```text
+Microphone
+↓
+sounddevice
+↓
+16 kHz mono WAV
+↓
+Speech-to-Text
+↓
+LangGraph Agent
+↓
+MCP
+↓
+Response
+↓
+Text-to-Speech
+↓
+pygame
+↓
+Speaker
+```
+
+---
+
+## Speech-to-Text
+
+Microphone input is recorded as:
+
+```text
+16 kHz
+mono
+16-bit PCM
+WAV
+```
+
+Speech is then converted into text before being sent to the same LangGraph agent used by the text interface.
+
+The STT layer therefore acts only as another input adapter.
+
+---
+
+## Voice Robustness Testing
+
+Voice testing included:
+
+- clearly spoken requests
+- improvised requests
+- longer conversational wording
+- noisier speech
+- minor transcription errors
+
+One useful test showed that perfect transcription is not always necessary for successful task completion.
+
+### Intended speech
+
+```text
+I was wondering what is the status of my card?
+```
+
+### STT result
+
+```text
+I was wondering what is the status of my car?
+```
+
+The important word:
+
+```text
+card
+```
+
+was incorrectly transcribed as:
+
+```text
+car
+```
+
+Despite this error, the router still inferred:
+
+```text
+card_status
+```
+
+and selected:
+
+```text
+get_card_status
+```
+
+The banking task therefore still completed successfully.
+
+This demonstrates the difference between:
+
+```text
+word-level transcription accuracy
+```
+
+and:
+
+```text
+end-to-end task success
+```
+
+A transcription can contain a minor mistake while still preserving enough semantic context for the downstream agent to correctly understand the user's intention.
+
+More detailed voice observations are available in:
+
+```text
+evaluation/voice_results.md
+```
+
+---
+
+# Latency Evaluation
+
+Voice latency was measured using `time.perf_counter()` for each major stage:
+
+- microphone recording
+- speech-to-text
+- LangGraph/MCP agent processing
+- text-to-speech
+- total system processing time
+
+`System latency` measures the time after the microphone recording has
+finished until the generated speech response is ready.
+
+Seven complete voice interactions were measured.
+
+| Run | STT | Agent | TTS | System latency | Total |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 2.04 s | 4.04 s | 6.02 s | 12.11 s | 17.28 s |
+| 2 | 2.25 s | 3.22 s | 6.88 s | 12.34 s | 17.48 s |
+| 3 | 1.77 s | 2.76 s | 36.07 s | 40.60 s | 45.69 s |
+| 4 | 1.29 s | 2.77 s | 1.93 s | 5.99 s | 11.08 s |
+| 5 | 2.26 s | 2.45 s | 2.14 s | 6.85 s | 11.93 s |
+| 6 | 1.38 s | 3.98 s | 2.89 s | 8.25 s | 13.33 s |
+| 7 | 1.14 s | 3.73 s | 5.37 s | 10.24 s | 15.41 s |
+
+## Summary
+
+| Metric | Mean | Median | Min | Max |
+|---|---:|---:|---:|---:|
+| STT | 1.73 s | 1.77 s | 1.14 s | 2.26 s |
+| Agent | 3.28 s | 3.22 s | 2.45 s | 4.04 s |
+| TTS | 8.76 s | 5.37 s | 1.93 s | 36.07 s |
+| System latency | 13.77 s | 10.24 s | 5.99 s | 40.60 s |
+| Total including recording | 18.89 s | 15.41 s | 11.08 s | 45.69 s |
+
+One run experienced a large TTS latency spike of 36.07 seconds. The remaining
+TTS measurements ranged from 1.93 to 6.88 seconds.
+
+Because of this outlier, the median system latency of **10.24 seconds** is also
+reported alongside the mean of **13.77 seconds**.
+
+The results indicate that STT and agent-processing latency were relatively
+stable, while TTS showed the largest variability across runs.
+
+## Current Measured Voice Benchmark
+
+Example spoken query:
+
+```text
+Someone took my card and now I can't find it.
+```
+
+The STT transcription was correct.
+
+The system produced:
+
+```text
+route=stolen_card
+tool=get_card_procedure
+```
+
+and returned the correct stolen-card procedure.
+
+---
+
+# Testing
+
+The project includes automated tests for both MCP and agent behavior.
+
+Run:
+
+```bash
+pytest
+```
+
+Current test suite:
+
+```text
+tests/test_agent.py
+tests/test_mcp.py
+```
+
+Result:
+
+```text
+7 passed
+```
+
+The MCP tests verify:
+
+- card-status retrieval
+- lost-card procedure retrieval
+- error handling for unknown customers
+
+The agent tests verify:
+
+- card-status routing
+- lost-card routing
+- stolen-card routing
+- FAQ behavior
+- correct MCP tool selection
+
+---
+
+# Project Structure
+
+```text
+banking_ai_assistant/
+│
+├── app/
+│   ├── __init__.py
+│   │
+│   ├── audio/
+│   │   ├── __init__.py
+│   │   ├── recorder.py
+│   │   ├── stt.py
+│   │   └── tts.py
+│   │
+│   ├── nodes/
+│   │   ├── __init__.py
+│   │   ├── router.py
+│   │   ├── faq.py
+│   │   ├── tools.py
+│   │   └── response.py
+│   │
+│   ├── graph.py
+│   ├── mcp_client.py
+│   └── state.py
+│
+├── mcp_server/
+│   ├── __init__.py
+│   ├── mock_data.py
+│   └── server.py
+│
+├── evaluation/
+│   ├── __init__.py
+│   ├── dataset.json
+│   ├── evaluate.py
+│   ├── metrics.py
+│   └── voice_results.md
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_agent.py
+│   └── test_mcp.py
+│
+├── main.py
+├── voice_main.py
+├── requirements.txt
+├── pytest.ini
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+---
+
+# Tech Stack
+
+### AI / Agent
+
+- Python
+- LangGraph
+- LangChain
+- OpenAI API
+- Pydantic
+
+### Tool Integration
+
+- Model Context Protocol
+- MCP Python SDK
+
+### Voice
+
+- OpenAI Speech-to-Text
+- OpenAI Text-to-Speech
+- sounddevice
+- scipy
+- pygame
+
+### Testing
+
+- pytest
+- pytest-asyncio
+
+---
+
+# Models
+
+The project uses environment variables for configurable chat-model selection.
+
+Example:
+
+```env
+OPENAI_MODEL=gpt-5.6-luna
+```
+
+Speech components currently use:
+
+```text
+STT: gpt-4o-mini-transcribe
+TTS: gpt-4o-mini-tts
+```
+
+---
+
+# Installation
+
+## 1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd banking_ai_assistant
+```
+
+## 2. Create a virtual environment
+
+Windows:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+## 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+---
+
+# Running the Text Assistant
+
+```bash
+python main.py
+```
+
+Example:
+
+```text
+============================================================
+Banking Support Assistant
+============================================================
+
+Demo customer: user_002
+Type 'exit' to quit.
+
+You: What's the status of my card?
+
+Assistant: Your replacement card ending in 1934 has been shipped...
+
+[debug] route=card_status tool=get_card_status
+```
+
+---
+
+# Running the Voice Assistant
+
+```bash
+python voice_main.py
+```
+
+Then:
+
+```text
+Press Enter
+↓
+speak for 5 seconds
+↓
+STT transcription appears
+↓
+LangGraph processes the request
+↓
+MCP tool is selected if necessary
+↓
+assistant answer is printed
+↓
+TTS generates speech
+↓
+response is played through the speaker
+```
+
+---
+
+# Running Tests
+
+```bash
+pytest
+```
+
+---
+
+# Running Evaluation
+
+```bash
+python -m evaluation.evaluate
+```
+
+The evaluator reports:
+
+```text
+Routing accuracy
+Tool-selection accuracy
+Expected-content success
+Unsafe action claims
+```
+
+---
+
+# Design Decisions
+
+## Why LangGraph?
+
+LangGraph makes the workflow explicit.
+
+Instead of having one large chatbot function, the application separates:
+
+```text
+routing
+↓
+tool execution
+↓
+response generation
+```
+
+into individual nodes.
+
+This makes the system easier to:
+
+- test
+- evaluate
+- inspect
+- modify
+- reason about
+
+---
+
+## Why MCP?
+
+MCP separates the conversational AI layer from backend capabilities.
+
+The agent does not directly know how banking data is stored.
+
+Instead:
+
+```text
+Agent
+↓
+MCP Client
+↓
+MCP Server
+↓
+Banking capability
+```
+
+This makes it possible to later replace the mock backend with a real API or database without redesigning the conversational workflow.
+
+---
+
+## Why Mock Banking Data?
+
+The goal of this project is to demonstrate:
+
+```text
+conversational AI
++
+agent orchestration
++
+MCP
++
+evaluation
++
+voice processing
+```
+
+rather than build a complete banking backend.
+
+The mock data layer keeps the project focused while preserving a realistic separation between the AI layer and backend capabilities.
+
+---
+
+## Why Structured Routing?
+
+The router returns a Pydantic model rather than unrestricted text.
+
+For example:
+
+```python
+class RouteDecision(BaseModel):
+    route: Literal[
+        "faq",
+        "card_status",
+        "lost_card",
+        "stolen_card",
+        "unknown",
+    ]
+```
+
+This makes routing:
+
+- deterministic in format
+- easier to test
+- easier to evaluate
+- safer than parsing arbitrary model output
+
+---
+
+# Key Engineering Takeaways
+
+This project demonstrates:
+
+- building controlled conversational workflows with LangGraph
+- exposing backend capabilities through MCP
+- using structured LLM output for routing
+- separating customer-specific tools from general FAQs
+- grounding responses in trusted backend data
+- preventing unsupported action claims
+- evaluating routing separately from response quality
+- using evaluation failures to improve routing behavior
+- integrating STT and TTS without modifying the core agent
+- measuring end-to-end conversational latency
+- testing robustness when speech transcription is imperfect
+
+---
+
+## Screenshots
+
+### Voice Assistant
+
+![Voice Assistant Demo](docs/voice_test1.png) 
+
+![](docs/voice_test2.png)
+
+### Evaluation Results
+
+![Evaluation Results](docs/evaluation_result.png)
+
+### Demo Vid
+![Demo Video](docs/demo_vid.mp4)
+

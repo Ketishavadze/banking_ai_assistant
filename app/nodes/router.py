@@ -48,8 +48,20 @@ stolen_card:
 The customer says the card was stolen or taken.
 
 faq:
-The customer asks a general informational question about card usage,
-fees, replacement times, international use, PINs, or banking policies.
+The customer asks a general informational question about:
+- card usage
+- international card use
+- fees
+- replacement times
+- PIN security
+- suspicious or unrecognized transactions
+- general card security
+- banking card policies
+
+Use faq when the customer is asking what they SHOULD DO about a suspicious
+or unrecognized transaction, as long as they are not asking for
+customer-specific transaction data.
+
 The question must NOT require customer-specific account information.
 
 unknown:
