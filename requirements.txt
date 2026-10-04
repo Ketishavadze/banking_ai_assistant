@@ -1,0 +1,8 @@
+langgraph
+langchain
+langchain-openai
+mcp[cli]
+python-dotenv
+pydantic
+pytest
+pytest-asyncio

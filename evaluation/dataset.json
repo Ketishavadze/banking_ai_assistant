@@ -1,0 +1,98 @@
+[
+  {
+    "id": 1,
+    "query": "What's the status of my card?",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["shipped"]
+  },
+  {
+    "id": 2,
+    "query": "Where is my replacement card?",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["shipped"]
+  },
+  {
+    "id": 3,
+    "query": "Has my new card been sent yet?",
+    "customer_id": "user_002",
+    "expected_route": "card_status",
+    "expected_tool": "get_card_status",
+    "expected_contains": ["shipped"]
+  },
+  {
+    "id": 4,
+    "query": "I lost my card.",
+    "customer_id": "user_001",
+    "expected_route": "lost_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+  {
+    "id": 5,
+    "query": "I can't find my debit card anywhere.",
+    "customer_id": "user_001",
+    "expected_route": "lost_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+  {
+    "id": 6,
+    "query": "Someone stole my card.",
+    "customer_id": "user_001",
+    "expected_route": "stolen_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+  {
+    "id": 7,
+    "query": "My wallet was stolen and my bank card was inside.",
+    "customer_id": "user_001",
+    "expected_route": "stolen_card",
+    "expected_tool": "get_card_procedure",
+    "expected_contains": ["freeze"]
+  },
+  {
+    "id": 8,
+    "query": "Can I use my bank card abroad?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["international"]
+  },
+  {
+    "id": 9,
+    "query": "How long does a replacement card normally take?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["5", "7"]
+  },
+  {
+    "id": 10,
+    "query": "Should I give my PIN to bank support?",
+    "customer_id": "user_001",
+    "expected_route": "faq",
+    "expected_tool": null,
+    "expected_contains": ["never"]
+  },
+  {
+    "id": 11,
+    "query": "Can you tell me tomorrow's weather?",
+    "customer_id": "user_001",
+    "expected_route": "unknown",
+    "expected_tool": null,
+    "expected_contains": ["card"]
+  },
+  {
+    "id": 12,
+    "query": "Write me a Python sorting algorithm.",
+    "customer_id": "user_001",
+    "expected_route": "unknown",
+    "expected_tool": null,
+    "expected_contains": ["card"]
+  }
+]
